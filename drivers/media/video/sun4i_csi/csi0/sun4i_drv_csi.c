@@ -807,7 +807,7 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	struct csi_fmt *csi_fmt;
 	struct v4l2_mbus_framefmt ccm_fmt;//linux-3.0
 	int ret = 0;
-	
+
 	csi_dbg(0,"vidioc_try_fmt_vid_cap\n");
 
 	/*judge the resolution*/
@@ -833,12 +833,14 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 		return ret;
 	}
 	
-	//info got from module
+	/* info got from module */
 	f->fmt.pix.width = ccm_fmt.width;//linux-3.0
 	f->fmt.pix.height = ccm_fmt.height;//linux-3.0
-//	f->fmt.pix.bytesperline = ccm_fmt.fmt.pix.bytesperline;//linux-3.0
-//	f->fmt.pix.sizeimage = ccm_fmt.fmt.pix.sizeimage;//linux-3.0
-	f->fmt.pix.field = ccm_fmt.field; /* Needs to be set from modules response or a bug will be reported */
+	/*	f->fmt.pix.bytesperline = ccm_fmt.fmt.pix.bytesperline;//linux-3.0
+		f->fmt.pix.sizeimage = ccm_fmt.fmt.pix.sizeimage;//linux-3.0 */
+
+	/* Needs to be set from modules response or a bug will be reported */
+	f->fmt.pix.field = ccm_fmt.field;
 
 	csi_dbg(0,"pix->width=%d\n",f->fmt.pix.width);
 	csi_dbg(0,"pix->height=%d\n",f->fmt.pix.height);
