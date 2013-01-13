@@ -35,7 +35,7 @@
 #include <linux/errno.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
-#include <linux/smp_lock.h>
+//#include <linux/smp_lock.h>
 #include <linux/preempt.h>
 #include <linux/cdev.h>
 #include <linux/platform_device.h>
@@ -68,9 +68,11 @@
 #else
 #  define _info(fmt, args...)
 #endif
-
+//#define g_dev_major AVSDEV_MAJOR;
+//#define g_dev_m
 int g_dev_major = AVSDEV_MAJOR;
 int g_dev_minor = AVSDEV_MINOR;
+
 module_param(g_dev_major, int, S_IRUGO);
 module_param(g_dev_minor, int, S_IRUGO);
 
@@ -373,7 +375,8 @@ static int __init avsdev_init(void)
 	}
 	memset(avs_devp, 0, sizeof(struct avs_dev));
 
-	init_MUTEX(&avs_devp->sem);
+	/*init_MUTEX(&avs_devp->sem);*/
+	sema_init(&avs_devp->sem,0);
 	
 	/* request resources and ioremap */
 	printk("[tt]-----      register iomem      ----\n");

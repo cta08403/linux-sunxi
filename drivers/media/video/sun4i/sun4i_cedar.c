@@ -64,10 +64,11 @@
 #define CONFIG_SW_SYSMEM_RESERVED_BASE 0x43000000
 #define CONFIG_SW_SYSMEM_RESERVED_SIZE 75776
 
-int g_dev_major = CEDARDEV_MAJOR;
-int g_dev_minor = CEDARDEV_MINOR;
-module_param(g_dev_major, int, S_IRUGO);//S_IRUGO represent that g_dev_major can be read,but canot be write
-module_param(g_dev_minor, int, S_IRUGO);
+int g_dev_major_cedar = CEDARDEV_MAJOR;
+int g_dev_minor_cedar = CEDARDEV_MINOR;
+module_param(g_dev_major_cedar, int, S_IRUGO);
+/* S_IRUGO represent that g_dev_major can be read,but cannot be written */
+module_param(g_dev_minor_cedar, int, S_IRUGO);
 
 #ifdef CHIP_VERSION_F23
 #define VE_IRQ_NO (53)
@@ -970,17 +971,17 @@ static int __init cedardev_init(void)
 	if ((err = platform_driver_register(&sw_cedar_driver)) < 0)
 		return err;
 	/*register or alloc the device number.*/
-	if (g_dev_major) {
-		dev = MKDEV(g_dev_major, g_dev_minor);
+	if (g_dev_major_cedar) {
+		dev = MKDEV(g_dev_major_cedar, g_dev_minor_cedar);
 		ret = register_chrdev_region(dev, 1, "cedar_dev");
 	} else {
-		ret = alloc_chrdev_region(&dev, g_dev_minor, 1, "cedar_dev");
-		g_dev_major = MAJOR(dev);
-		g_dev_minor = MINOR(dev);
+		ret = alloc_chrdev_region(&dev, g_dev_minor_cedar, 1, "cedar_dev");
+		g_dev_major_cedar = MAJOR(dev);
+		g_dev_minor_cedar = MINOR(dev);
 	}
 
 	if (ret < 0) {
-		printk(KERN_WARNING "cedar_dev: can't get major %d\n", g_dev_major);
+		printk(KERN_WARNING "cedar_dev: can't get major %d\n", g_dev_major_cedar);
 		return ret;
 	}
 	spin_lock_init(&cedar_spin_lock);
@@ -1047,7 +1048,7 @@ static int __init cedardev_init(void)
 	printk("SRAM:0xf1c00000 is:%x\n", *(volatile int *)0xf1c00000);
 	#endif
 	/* Create char device */
-	devno = MKDEV(g_dev_major, g_dev_minor);
+	devno = MKDEV(g_dev_major_cedar, g_dev_minor_cedar);
 	cdev_init(&cedar_devp->cdev, &cedardev_fops);
 	cedar_devp->cdev.owner = THIS_MODULE;
 	cedar_devp->cdev.ops = &cedardev_fops;
@@ -1070,7 +1071,7 @@ module_init(cedardev_init);
 static void __exit cedardev_exit(void)
 {
 	dev_t dev;
-	dev = MKDEV(g_dev_major, g_dev_minor);
+	dev = MKDEV(g_dev_major_cedar, g_dev_minor_cedar);
 
     free_irq(VE_IRQ_NO, NULL);
 	iounmap(cedar_devp->iomap_addrs.regs_macc);
