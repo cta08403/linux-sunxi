@@ -1696,14 +1696,28 @@ ft5x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	ft5x_ts->input_dev = input_dev;
 
+	set_bit(EV_ABS, input_dev->evbit);
+	set_bit(EV_KEY, input_dev->evbit);
+
+	set_bit(ABS_X, input_dev->absbit);
+	set_bit(ABS_Y, input_dev->absbit);
+	set_bit(ABS_PRESSURE, input_dev->absbit);
+
+	set_bit(BTN_TOUCH, input_dev->keybit);
+
+	input_set_abs_params(input_dev,
+			ABS_X, 0, SCREEN_MAX_X, 0, 0);
+	input_set_abs_params(input_dev,
+			ABS_Y, 0, SCREEN_MAX_Y, 0, 0);
+	input_set_abs_params(input_dev,
+			ABS_PRESSURE, 0, PRESS_MAX, 0 , 0);
+
 #ifdef CONFIG_FT5X0X_MULTITOUCH
 	set_bit(ABS_MT_TOUCH_MAJOR, input_dev->absbit);
 	set_bit(ABS_MT_POSITION_X, input_dev->absbit);
 	set_bit(ABS_MT_POSITION_Y, input_dev->absbit);
 	set_bit(ABS_MT_WIDTH_MAJOR, input_dev->absbit);
-#ifdef FOR_TSLIB_TEST
-	set_bit(BTN_TOUCH, input_dev->keybit);
-#endif
+
 	input_set_abs_params(input_dev,
 			     ABS_MT_POSITION_X, 0, SCREEN_MAX_X, 0, 0);
 	input_set_abs_params(input_dev,
@@ -1720,21 +1734,11 @@ ft5x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	for (i = 1; i < TOUCH_KEY_NUMBER; i++)
 		set_bit(i, input_dev->keybit);
 #endif
-#else
-	set_bit(ABS_X, input_dev->absbit);
-	set_bit(ABS_Y, input_dev->absbit);
-	set_bit(ABS_PRESSURE, input_dev->absbit);
-	set_bit(BTN_TOUCH, input_dev->keybit);
-	input_set_abs_params(input_dev, ABS_X, 0, SCREEN_MAX_X, 0, 0);
-	input_set_abs_params(input_dev, ABS_Y, 0, SCREEN_MAX_Y, 0, 0);
-	input_set_abs_params(input_dev,
-			     ABS_PRESSURE, 0, PRESS_MAX, 0 , 0);
 #endif
 
-	set_bit(EV_ABS, input_dev->evbit);
-	set_bit(EV_KEY, input_dev->evbit);
-
 	input_dev->name		= CTP_NAME;		//dev_name(&client->dev)
+	input_dev->id.bustype = BUS_I2C;
+	input_dev->dev.parent = &client->dev;
 	err = input_register_device(input_dev);
 	if (err) {
 		dev_err(&client->dev,
