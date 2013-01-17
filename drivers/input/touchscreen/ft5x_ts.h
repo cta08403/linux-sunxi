@@ -27,6 +27,33 @@
 #define CONFIG_FT5X0X_MULTITOUCH     (1)
 #define CALIBRATION  (1)
 #define UPGRADE   (5)
+/*#define IOCTL_SETXNORMAL  _IOR(I2C_MAJOR, (10), char *)
+#define IOCTL_SETYNORMAL  _IOR(I2C_MAJOR, (11), char *)
+#define IOCTL_SETXINVERT  _IOR(I2C_MAJOR, (12), char *)
+#define IOCTL_SETYINVERT  _IOR(I2C_MAJOR, (13), char *)
+#define IOCTL_SETXYNORMAL _IOR(I2C_MAJOR, (14), char *)
+#define IOCTL_SETXYSWAP   _IOR(I2C_MAJOR, (15), char *)*/
+#define IOCTL_SETXNORMAL  (10)
+#define IOCTL_SETYNORMAL  (11)
+#define IOCTL_SETXINVERT  (12)
+#define IOCTL_SETYINVERT  (13)
+#define IOCTL_SETXYNORMAL (14)
+#define IOCTL_SETXYSWAP   (15)
+#define IOCTL_SETXMAX	   (16)
+#define IOCTL_SETYMAX  	   (17)
+#define IOCTL_GETXDEF     (18)
+#define IOCTL_GETYDEF     (19)
+
+#define FT5X_SCALE_HACK 1 /* The device shows at 1024x600 or something similar even after rotation */
+#ifdef FT5X_SCALE_HACK
+
+#define IOCTL_FT5X_SETSCALE (20)
+#define IOCTL_SETXSCALE	   (21)
+#define IOCTL_SETYSCALE	   (22)
+
+#endif
+
+
 //#define CALIBRATION _IO(CALIBRATION_FLAG,0)
 //#define UPDRAGE _IO(UPDRAGE_FLAG,0)
 #define I2C_MINORS 	256
@@ -67,6 +94,42 @@ enum ft5x_ts_regs {
     #define ABS_MT_BLOB_ID		0x38	/* Group set of pkts as blob */
 #endif /* ABS_MT_TOUCH_MAJOR */
 
+
+
+#define FOR_TSLIB_TEST
+//#define PRINT_INT_INFO
+//#define PRINT_POINT_INFO
+//#define DEBUG
+//#define TOUCH_KEY_SUPPORT
+#ifdef TOUCH_KEY_SUPPORT
+//#define TOUCH_KEY_LIGHT_SUPPORT
+//#define TOUCH_KEY_FOR_EVB13
+//#define TOUCH_KEY_FOR_ANGDA
+#ifdef TOUCH_KEY_FOR_ANGDA
+#define TOUCH_KEY_X_LIMIT	(60000)
+#define TOUCH_KEY_NUMBER	(4)
+#endif
+#ifdef TOUCH_KEY_FOR_EVB13
+#define TOUCH_KEY_LOWER_X_LIMIT	(848)
+#define TOUCH_KEY_HIGHER_X_LIMIT	(852)
+#define TOUCH_KEY_NUMBER	(5)
+#endif
+#endif
+
+//#define CONFIG_SUPPORT_FTS_CTP_UPG
+
+struct i2c_dev{
+struct list_head list;
+struct i2c_adapter *adap;
+struct device *dev;
+};
+
+static struct class *i2c_dev_class;
+static LIST_HEAD (i2c_dev_list);
+static DEFINE_SPINLOCK(i2c_dev_list_lock);
+
+#define FT5X_NAME		"ft5x_ts"
+#define CHARDEV_NAME    "aw_i2c_ts"
 
 #endif
 

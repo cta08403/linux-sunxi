@@ -48,40 +48,6 @@
 #include <mach/sys_config.h>
 #include "ctp_platform_ops.h"
 
-#define FOR_TSLIB_TEST
-//#define PRINT_INT_INFO
-//#define PRINT_POINT_INFO
-//#define DEBUG
-//#define TOUCH_KEY_SUPPORT
-#ifdef TOUCH_KEY_SUPPORT
-//#define TOUCH_KEY_LIGHT_SUPPORT
-//#define TOUCH_KEY_FOR_EVB13
-//#define TOUCH_KEY_FOR_ANGDA
-#ifdef TOUCH_KEY_FOR_ANGDA
-#define TOUCH_KEY_X_LIMIT	(60000)
-#define TOUCH_KEY_NUMBER	(4)
-#endif
-#ifdef TOUCH_KEY_FOR_EVB13
-#define TOUCH_KEY_LOWER_X_LIMIT	(848)
-#define TOUCH_KEY_HIGHER_X_LIMIT	(852)
-#define TOUCH_KEY_NUMBER	(5)
-#endif
-#endif
-
-//#define CONFIG_SUPPORT_FTS_CTP_UPG
-
-struct i2c_dev{
-struct list_head list;
-struct i2c_adapter *adap;
-struct device *dev;
-};
-
-static struct class *i2c_dev_class;
-static LIST_HEAD (i2c_dev_list);
-static DEFINE_SPINLOCK(i2c_dev_list_lock);
-
-#define FT5X_NAME	"ft5x_ts"//"synaptics_i2c_rmi"//"synaptics-rmi-ts"//
-#define CHARDEV_NAME    "aw_i2c_ts"
 
 static struct i2c_client *this_client;
 #ifdef TOUCH_KEY_LIGHT_SUPPORT
@@ -147,6 +113,12 @@ static union{
 	const unsigned short normal_i2c[2];
 }u_i2c_addr = {{0x00},};
 static __u32 twi_id = 0;
+
+#ifdef FT5X_SCALE_HACK
+static int scaling_enabled = 0;
+static int scale_x = 0;
+static int scale_y = 0;
+#endif
 
 /*
  * ctp_get_pendown_state  : get the int_line data state,
@@ -1263,62 +1235,86 @@ static int ft5x_read_data(void)
 	case 5:
 		event->x5 = (s16)(buf[0x1b] & 0x0F)<<8 | (s16)buf[0x1c];
 		event->y5 = (s16)(buf[0x1d] & 0x0F)<<8 | (s16)buf[0x1e];
+		if(1 == exchange_x_y_flag){
+			swap(event->x5, event->y5);
+		}
 		if(1 == revert_x_flag){
 			event->x5 = SCREEN_MAX_X - event->x5;
 		}
 		if(1 == revert_y_flag){
 			event->y5 = SCREEN_MAX_Y - event->y5;
 		}
-		//pr_info("before swap: event->x5 = %d, event->y5 = %d. \n", event->x5, event->y5);
-		if(1 == exchange_x_y_flag){
-			swap(event->x5, event->y5);
+#ifdef FT5X_SCALE_HACK
+		if(1 == scaling_enabled){
+			/*pr_info("before scaling: event->x1 = %d, event->y1 = %d. XM=%d YM=%d XS=%d YS=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y, scale_x, scale_y);*/
+			event->x5 = ((int)((int)event->x5 * (int)scale_x ) / SCREEN_MAX_X );
+			event->y5 = ((int)((int)event->y5 * (int)scale_y ) / SCREEN_MAX_Y );
+			/*pr_info("after scaling: event->x1 = %d, event->y1 = %d. \n", event->x1, event->y1);*/
 		}
-		//pr_info("after swap: event->x5 = %d, event->y5 = %d. \n", event->x5, event->y5);
+#endif
 		event->touch_ID5=(s16)(buf[0x1D] & 0xF0)>>4;
 	case 4:
 		event->x4 = (s16)(buf[0x15] & 0x0F)<<8 | (s16)buf[0x16];
 		event->y4 = (s16)(buf[0x17] & 0x0F)<<8 | (s16)buf[0x18];
+		if(1 == exchange_x_y_flag){
+			swap(event->x4, event->y4);
+		}
 		if(1 == revert_x_flag){
 			event->x4 = SCREEN_MAX_X - event->x4;
 		}
 		if(1 == revert_y_flag){
 			event->y4 = SCREEN_MAX_Y - event->y4;
 		}
-		//pr_info("before swap: event->x4 = %d, event->y4 = %d. \n", event->x4, event->y4);
-		if(1 == exchange_x_y_flag){
-			swap(event->x4, event->y4);
+#ifdef FT5X_SCALE_HACK
+		if(1 == scaling_enabled){
+			/*pr_info("before scaling: event->x1 = %d, event->y1 = %d. XM=%d YM=%d XS=%d YS=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y, scale_x, scale_y);*/
+			event->x4 = ((int)((int)event->x4 * (int)scale_x ) / SCREEN_MAX_X );
+			event->y4 = ((int)((int)event->y4 * (int)scale_y ) / SCREEN_MAX_Y );
+			/*pr_info("after scaling: event->x1 = %d, event->y1 = %d. \n", event->x1, event->y1);*/
 		}
-		//pr_info("after swap: event->x4 = %d, event->y4 = %d. \n", event->x4, event->y4);
+#endif
 		event->touch_ID4=(s16)(buf[0x17] & 0xF0)>>4;
 	case 3:
 		event->x3 = (s16)(buf[0x0f] & 0x0F)<<8 | (s16)buf[0x10];
 		event->y3 = (s16)(buf[0x11] & 0x0F)<<8 | (s16)buf[0x12];
+		if(1 == exchange_x_y_flag){
+			swap(event->x3, event->y3);
+		}
 		if(1 == revert_x_flag){
 			event->x3 = SCREEN_MAX_X - event->x3;
 		}
 		if(1 == revert_y_flag){
 			event->y3 = SCREEN_MAX_Y - event->y3;
 		}
-		//pr_info("before swap: event->x3 = %d, event->y3 = %d. \n", event->x3, event->y3);
-		if(1 == exchange_x_y_flag){
-			swap(event->x3, event->y3);
+#ifdef FT5X_SCALE_HACK
+		if(1 == scaling_enabled){
+			/*pr_info("before scaling: event->x1 = %d, event->y1 = %d. XM=%d YM=%d XS=%d YS=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y, scale_x, scale_y);*/
+			event->x3 = ((int)((int)event->x3 * (int)scale_x ) / SCREEN_MAX_X );
+			event->y3 = ((int)((int)event->y3 * (int)scale_y ) / SCREEN_MAX_Y );
+			/*pr_info("after scaling: event->x1 = %d, event->y1 = %d. \n", event->x1, event->y1);*/
 		}
-		//pr_info("after swap: event->x3 = %d, event->y3 = %d. \n", event->x3, event->y3);
+#endif
 		event->touch_ID3=(s16)(buf[0x11] & 0xF0)>>4;
 	case 2:
 		event->x2 = (s16)(buf[9] & 0x0F)<<8 | (s16)buf[10];
 		event->y2 = (s16)(buf[11] & 0x0F)<<8 | (s16)buf[12];
+		if(1 == exchange_x_y_flag){
+			swap(event->x2, event->y2);
+		}
 		if(1 == revert_x_flag){
 			event->x2 = SCREEN_MAX_X - event->x2;
 		}
 		if(1 == revert_y_flag){
 			event->y2 = SCREEN_MAX_Y - event->y2;
 		}
-		//pr_info("before swap: event->x2 = %d, event->y2 = %d. \n", event->x2, event->y2);
-		if(1 == exchange_x_y_flag){
-			swap(event->x2, event->y2);
+#ifdef FT5X_SCALE_HACK
+		if(1 == scaling_enabled){
+			/*pr_info("before scaling: event->x1 = %d, event->y1 = %d. XM=%d YM=%d XS=%d YS=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y, scale_x, scale_y);*/
+			event->x2 = ((int)((int)event->x2 * (int)scale_x ) / SCREEN_MAX_X );
+			event->y2 = ((int)((int)event->y2 * (int)scale_y ) / SCREEN_MAX_Y );
+			/*pr_info("after scaling: event->x1 = %d, event->y1 = %d. \n", event->x1, event->y1);*/
 		}
-		//pr_info("after swap: event->x2 = %d, event->y2 = %d. \n", event->x2, event->y2);
+#endif
 		event->touch_ID2=(s16)(buf[0x0b] & 0xF0)>>4;
 	case 1:
 		event->x1 = (s16)(buf[3] & 0x0F)<<8 | (s16)buf[4];
@@ -1352,19 +1348,29 @@ static int ft5x_read_data(void)
 			}
 		}
 #else
+		pr_info("before swap: event->x1 = %d, event->y1 = %d. XM=%d YM=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y);
+		if(1 == exchange_x_y_flag){
+			swap(event->x1, event->y1);
+		}
 		if(1 == revert_x_flag){
 			event->x1 = SCREEN_MAX_X - event->x1;
 		}
 		if(1 == revert_y_flag){
 			event->y1 = SCREEN_MAX_Y - event->y1;
 		}
-		//pr_info("before swap: event->x1 = %d, event->y1 = %d. \n", event->x1, event->y1);
-		if(1 == exchange_x_y_flag){
-			swap(event->x1, event->y1);
+
+#ifdef FT5X_SCALE_HACK
+		if(1 == scaling_enabled){
+			/*pr_info("before scaling: event->x1 = %d, event->y1 = %d. XM=%d YM=%d XS=%d YS=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y, scale_x, scale_y);*/
+			event->x1 = ((int)((int)event->x1 * (int)scale_x ) / SCREEN_MAX_X );
+			event->y1 = ((int)((int)event->y1 * (int)scale_y ) / SCREEN_MAX_Y );
+			/*pr_info("after scaling: event->x1 = %d, event->y1 = %d. \n", event->x1, event->y1);*/
 		}
 #endif
 
-		//pr_info("after swap: event->x1 = %d, event->y1 = %d. \n", event->x1, event->y1);
+#endif
+
+		pr_info("after swap: event->x1 = %d, event->y1 = %d. M=%d YM=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y);
 		event->touch_ID1=(s16)(buf[0x05] & 0xF0)>>4;
 		break;
 	default:
@@ -1897,6 +1903,8 @@ static int aw_open(struct inode *inode, struct file *file)
 static long aw_ioctl(struct file *file, unsigned int cmd,unsigned long arg )
 {
 	//struct i2c_client *client = (struct i2c_client *) file->private_data;
+	int* ret_val;
+	int ret_size[1] = {0};
 
 	pr_info("====%s====.\n",__func__);
 
@@ -1909,8 +1917,89 @@ static long aw_ioctl(struct file *file, unsigned int cmd,unsigned long arg )
 		pr_info("==UPGRADE_WORK=\n");
 		fts_ctpm_fw_upgrade_with_i_file();
 		// calibrate();
-
 		break;
+
+		case IOCTL_SETXNORMAL:
+		pr_info("==Set X axis normal=\n");
+		revert_x_flag = 0;
+		break;
+
+		case IOCTL_SETYNORMAL:
+		pr_info("==Set Y axis normal=\n");
+		revert_y_flag = 0;
+		break;
+
+		case IOCTL_SETXINVERT:
+		pr_info("==Set X axis inverted=\n");
+		revert_x_flag = 1;
+		break;
+
+		case IOCTL_SETYINVERT:
+		pr_info("==Set Y axis inverted=\n");
+		revert_y_flag = 1;
+		break;
+
+		case IOCTL_SETXYNORMAL:
+		pr_info("==Set X,Y axes normal=\n");
+		exchange_x_y_flag = 0;
+		break;
+
+		case IOCTL_SETXYSWAP:
+		pr_info("==Set X,Y axes swapped=\n");
+		exchange_x_y_flag = 1;
+		break;
+
+		case IOCTL_SETXMAX:
+		pr_info("==Set X max=\n");
+		screen_max_x = arg;
+		break;
+
+		case IOCTL_SETYMAX:
+		pr_info("==Set Y max=\n");
+		screen_max_y = arg;
+		break;
+
+		case IOCTL_GETXDEF:
+		pr_info("==Get X def=\n");
+		ret_val = (int*)arg;
+		if(SCRIPT_PARSER_OK != script_parser_fetch("ctp_para", "ctp_screen_max_x", ret_size, 1)){
+			pr_err("%s: script_parser_fetch err. Using default of screen_max_x \n", __func__);
+			ret_size[0] = screen_max_x;
+		}
+		*ret_val = ret_size[0];
+		break;
+
+		case IOCTL_GETYDEF:
+		pr_info("==Get Y def=\n");
+		ret_val = (int*)arg;
+		if(SCRIPT_PARSER_OK != script_parser_fetch("ctp_para", "ctp_screen_max_y", ret_size, 1)){
+			pr_err("%s: script_parser_fetch err. Using default of screen_max_y \n", __func__);
+			ret_size[0] = screen_max_y;
+		}
+		*ret_val = ret_size[0];
+		break;
+
+#ifdef FT5X_SCALE_HACK
+
+		case IOCTL_FT5X_SETSCALE:
+		pr_info("==Scaling enabled set to %d max=\n",(int)arg);
+		scaling_enabled = arg;
+		break;
+
+		case IOCTL_SETXSCALE:
+		pr_info("==Set X scale=\n");
+		scale_x = arg;
+		break;
+
+		case IOCTL_SETYSCALE:
+		pr_info("==Set Y scale=\n");
+		scale_y = arg;
+		break;
+
+#endif
+
+
+
 
 		default:
 		break;
