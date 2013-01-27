@@ -1403,7 +1403,7 @@ __s32 NFC_ReadRetryInit(__u32 read_retry_type)
 	read_retry_cycle =(read_retry_type>>8)&0xff;
 	read_retry_reg_num = (read_retry_type>>0)&0xff;
 
-	if(read_retry_mode == 0)  //mode0  hynix readretry mode0
+	if(read_retry_mode == 0)  //mode0  H27UCG8T2MYR 
 	{
 		read_retry_reg_adr[0] = 0xAC;
 		read_retry_reg_adr[1] = 0xAD;
@@ -1420,7 +1420,7 @@ __s32 NFC_ReadRetryInit(__u32 read_retry_type)
 		}
 
 	}
-	else if(read_retry_mode == 1) //mode1  hynix readretry mode
+	else if(read_retry_mode == 1) //mode1  H27UBG8T2BTR
 	{
 		read_retry_reg_adr[0] = 0xA7;
 		read_retry_reg_adr[1] = 0xAD;
@@ -1436,21 +1436,28 @@ __s32 NFC_ReadRetryInit(__u32 read_retry_type)
 			}
 
 		}
-
-		//set lsb mode
-		lsb_mode_reg_num = 5;
-
-		lsb_mode_reg_adr[0] = 0xa4;
-		lsb_mode_reg_adr[1] = 0xa5;
-		lsb_mode_reg_adr[2] = 0xb0;
-		lsb_mode_reg_adr[3] = 0xb1;
-		lsb_mode_reg_adr[4] = 0xc9;
-
-		lsb_mode_val[0] = 0x25;
-		lsb_mode_val[1] = 0x25;
-		lsb_mode_val[2] = 0x25;
-		lsb_mode_val[3] = 0x25;
-		lsb_mode_val[4] = 0x1;
+	}
+	else if(read_retry_mode == 2) //mode2  H27UCG8T2ATR
+	{
+		read_retry_reg_adr[0] = 0xCC;
+		read_retry_reg_adr[1] = 0xBF;
+		read_retry_reg_adr[2] = 0xAA;
+		read_retry_reg_adr[3] = 0xAB;
+		read_retry_reg_adr[4] = 0xCD;
+		read_retry_reg_adr[5] = 0xAD;
+		read_retry_reg_adr[6] = 0xAE;
+		read_retry_reg_adr[7] = 0xAF;	
+	}
+	else if(read_retry_mode ==3) //mode2  H27UCG8T2ATR
+	{
+		read_retry_reg_adr[0] = 0xB0;
+		read_retry_reg_adr[1] = 0xB1;
+		read_retry_reg_adr[2] = 0xB2;
+		read_retry_reg_adr[3] = 0xB3;
+		read_retry_reg_adr[4] = 0xB4;
+		read_retry_reg_adr[5] = 0xB5;
+		read_retry_reg_adr[6] = 0xB6;
+		read_retry_reg_adr[7] = 0xB7;	
 	}
 	else if(read_retry_mode == 0x10)  //mode0x10  toshiba readretry mode0
 	{
