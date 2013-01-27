@@ -1348,7 +1348,7 @@ static int ft5x_read_data(void)
 			}
 		}
 #else
-		pr_info("before swap: event->x1 = %d, event->y1 = %d. XM=%d YM=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y);
+		/*pr_info("before swap: event->x1 = %d, event->y1 = %d. XM=%d YM=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y);*/
 		if(1 == exchange_x_y_flag){
 			swap(event->x1, event->y1);
 		}
@@ -1370,7 +1370,7 @@ static int ft5x_read_data(void)
 
 #endif
 
-		pr_info("after swap: event->x1 = %d, event->y1 = %d. M=%d YM=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y);
+		/*pr_info("after swap: event->x1 = %d, event->y1 = %d. M=%d YM=%d\n", event->x1, event->y1, SCREEN_MAX_X, SCREEN_MAX_Y);*/
 		event->touch_ID1=(s16)(buf[0x05] & 0xF0)>>4;
 		break;
 	default:
