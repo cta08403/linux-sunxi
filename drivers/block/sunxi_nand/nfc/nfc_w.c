@@ -36,11 +36,13 @@ extern void _set_addr(__u8 *addr, __u8 cnt);
 extern __s32 nfc_set_cmd_register(NFC_CMD_LIST *cmd);
 extern __s32 _read_in_page_mode(NFC_CMD_LIST  *rcmd,void *mainbuf,void *sparebuf,__u8 dma_wait_mode);
 extern __s32 _read_in_normal_mode(NFC_CMD_LIST  *rcmd, __u8 *mainbuf, __u8 *sparebuf,__u8 dma_wait_mode);
-
+extern void nfc_repeat_mode_enable(void);
+extern void nfc_repeat_mode_disable(void);
 
 extern __u8 read_retry_reg_adr[READ_RETRY_MAX_REG_NUM];
-extern __u8 read_retry_default_val[8][READ_RETRY_MAX_REG_NUM];
+extern __u8 read_retry_default_val[MAX_CHIP_SELECT_CNT][READ_RETRY_MAX_REG_NUM];
 extern __s16 read_retry_val[READ_RETRY_MAX_CYCLE][READ_RETRY_MAX_REG_NUM];
+extern __u8 hynix_read_retry_otp_value[MAX_CHIP_SELECT_CNT][8][8];
 extern __u8 read_retry_mode;
 extern __u8 read_retry_cycle;
 extern __u8 read_retry_reg_num;
@@ -53,6 +55,7 @@ extern __u8 lsb_mode_reg_num;
 extern __s32 _vender_get_param(__u8 *para, __u8 *addr, __u32 count);
 extern __s32 _vender_set_param(__u8 *para, __u8 *addr, __u32 count);
 extern __s32 _vender_pre_condition(void);
+extern __s32 _vender_get_param_otp_hynix(__u8 *para, __u8 *addr, __u32 count);
 
 
 /*after send write or erase command, must wait rb from ready to busy, then can send status command
@@ -873,7 +876,7 @@ __s32 NFC_LSBInit(__u32 read_retry_type)
 	read_retry_cycle =(read_retry_type>>8)&0xff;
 	read_retry_reg_num = (read_retry_type>>0)&0xff;
 
-	if(read_retry_mode == 1) //mode1
+	if((read_retry_type>0)&&((read_retry_mode == 0)||(read_retry_mode == 1))) //mode1
 	{
 		//set lsb mode
 		lsb_mode_reg_num = 5;
@@ -890,10 +893,37 @@ __s32 NFC_LSBInit(__u32 read_retry_type)
 		lsb_mode_val[3] = 0x25;
 		lsb_mode_val[4] = 0x1;
 	}
-	else
+	else if((read_retry_type>0)&&(read_retry_mode == 2)) //mode2
 	{
-	    return -1;
+		//set lsb mode
+		lsb_mode_reg_num = 4;
+		
+		lsb_mode_reg_adr[0] = 0xB0;
+		lsb_mode_reg_adr[1] = 0xB1;
+		lsb_mode_reg_adr[2] = 0xA0;
+		lsb_mode_reg_adr[3] = 0xA1;
+		
+		lsb_mode_val[0] = 0x0A;
+		lsb_mode_val[1] = 0x0A;
+		lsb_mode_val[2] = 0x0A;
+		lsb_mode_val[3] = 0x0A;
 	}
+	else if((read_retry_type>0)&&(read_retry_mode == 3)) //mode2
+	{
+		//set lsb mode
+		lsb_mode_reg_num = 4;
+		
+		lsb_mode_reg_adr[0] = 0xA0;
+		lsb_mode_reg_adr[1] = 0xA1;
+		lsb_mode_reg_adr[2] = 0xA7;
+		lsb_mode_reg_adr[3] = 0xA8;
+		
+		lsb_mode_val[0] = 0x0A;
+		lsb_mode_val[1] = 0x0A;
+		lsb_mode_val[2] = 0x0A;
+		lsb_mode_val[3] = 0x0A;
+	}
+
 
 	return 0;
 }
@@ -949,6 +979,29 @@ __s32 NFC_LSBDisable(__u32 chip, __u32 read_retry_type)
 
 __s32 NFC_LSBExit(__u32 read_retry_type)
 {
+    __u32 cfg;
+    __u8 addr[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    
+    if((read_retry_type>0)&&((read_retry_mode == 2)||(read_retry_mode == 3))) //mode2
+    {
+    /* send cmd to disable lsb mode */
+		/*set 0x00*/
+		_wait_cmdfifo_free();
+		_set_addr(addr, 5);
+		cfg = (NFC_SEND_CMD1|NFC_SEND_ADR|((5-1)<<16) | 0x00);
+		NFC_WRITE_REG(NFC_REG_CMD, cfg);
+		_wait_cmd_finish();
+		
+		
+		/*set 0x30*/
+		_wait_cmdfifo_free();
+		cfg = (NFC_SEND_CMD1 | 0x30);
+		NFC_WRITE_REG(NFC_REG_CMD, cfg);
+		
+		_wait_cmd_finish();
+		
+		PRINT("NFC_LSBExit \n");
+    }
 
 	return 0;
 }
