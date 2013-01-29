@@ -63,8 +63,18 @@ __u32 _cal_block_in_chip(__u32 global_bank, __u32 super_blk_within_bank)
 
 	blk_within_chip = bank_base + single_blk_within_bank;
 
+    if(!SUPPORT_DIE_SKIP)
+    {
 	if (blk_within_chip >= DIE_CNT_OF_CHIP * BLOCK_CNT_OF_DIE)
 		blk_within_chip = 0xffffffff;
+    }
+    else
+    {
+        blk_within_chip = blk_within_chip%BLOCK_CNT_OF_DIE + 2*(blk_within_chip/BLOCK_CNT_OF_DIE);
+        if (blk_within_chip >= 2*DIE_CNT_OF_CHIP * BLOCK_CNT_OF_DIE)
+		    blk_within_chip = 0xffffffff;
+    }
+	
 	
 	return blk_within_chip;
 }
@@ -243,6 +253,7 @@ __s32 _read_single_page_spare(struct boot_physical_param *readop,__u8 dma_wait_m
 	__u8 addr[5];
 	NFC_CMD_LIST cmd_list[4];
 	__u32 list_len,i;
+	__u32 free_page_flag = 0;
 
 	//sparebuf = (__u8 *)MALLOC(SECTOR_CNT_OF_SINGLE_PAGE * 4);
 	/*create cmd list*/
@@ -299,7 +310,29 @@ __s32 _read_single_page_spare(struct boot_physical_param *readop,__u8 dma_wait_m
 				random_seed = _cal_random_seed(readop->page);
 				NFC_SetRandomSeed(random_seed);
 				NFC_RandomEnable();
+				free_page_flag = 0;
 				ret = NFC_Read_Spare(cmd_list, readop->mainbuf, sparebuf, dma_wait_mode , NFC_PAGE_MODE);
+				if(readop->page == 0)
+				{
+					if((sparebuf[4*i] == 0x0a)&&(sparebuf[4*i+1] == 0x53)&&(sparebuf[4*i+2] == 0xb8)&&(sparebuf[4*i+3] == 0xc2))
+						free_page_flag = 1;
+
+				}
+				else if((readop->page%128) == 127)
+				{
+					if((sparebuf[4*i] == 0x32)&&(sparebuf[4*i+1] == 0x43)&&(sparebuf[4*i+2] == 0xaa)&&(sparebuf[4*i+3] == 0x4e))
+						free_page_flag = 1;
+		
+				}
+
+				if(free_page_flag)
+				{
+					ret = 0;
+					sparebuf[4*i] = 0xff;
+					sparebuf[4*i+1] = 0xff;
+					sparebuf[4*i+2] = 0xff;
+					sparebuf[4*i+3] = 0xff;
+				}
 				NFC_RandomDisable();
 				if(ret == -ERR_ECC)
 					ret = NFC_Read_Spare(cmd_list, readop->mainbuf, sparebuf, dma_wait_mode , NFC_PAGE_MODE);
@@ -359,7 +392,29 @@ __s32 _read_single_page_spare(struct boot_physical_param *readop,__u8 dma_wait_m
 			random_seed = _cal_random_seed(readop->page);
 			NFC_SetRandomSeed(random_seed);
 			NFC_RandomEnable();
+			free_page_flag = 0;
 			ret = NFC_Read_Spare(cmd_list, readop->mainbuf, sparebuf, dma_wait_mode , NFC_PAGE_MODE);
+			if(readop->page == 0)
+			{
+				if((sparebuf[4*i] == 0x0a)&&(sparebuf[4*i+1] == 0x53)&&(sparebuf[4*i+2] == 0xb8)&&(sparebuf[4*i+3] == 0xc2))
+					free_page_flag = 1;
+
+			}
+			else if((readop->page%128) == 127)
+			{
+				if((sparebuf[4*i] == 0x32)&&(sparebuf[4*i+1] == 0x43)&&(sparebuf[4*i+2] == 0xaa)&&(sparebuf[4*i+3] == 0x4e))
+					free_page_flag = 1;
+	
+			}
+
+			if(free_page_flag)
+			{
+				ret = 0;
+				sparebuf[4*i] = 0xff;
+				sparebuf[4*i+1] = 0xff;
+				sparebuf[4*i+2] = 0xff;
+				sparebuf[4*i+3] = 0xff;
+			}
 			NFC_RandomDisable();
 			if(ret == -ERR_ECC)
 				ret = NFC_Read_Spare(cmd_list, readop->mainbuf, sparebuf, dma_wait_mode , NFC_PAGE_MODE);

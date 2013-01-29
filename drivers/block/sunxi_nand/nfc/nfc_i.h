@@ -38,7 +38,7 @@
 #define ERR_TIMEOUT 14
 #define READ_RETRY_MAX_TYPE_NUM 5
 #define READ_RETRY_MAX_REG_NUM	8
-#define READ_RETRY_MAX_CYCLE	10
+//#define READ_RETRY_MAX_CYCLE	10
 #define LSB_MODE_MAX_REG_NUM	8
 /* define various unit data input or output*/
 #define NFC_READ_RAM_B(ram)    		(*((volatile __u8 *)(NAND_IO_BASE + ram)))
