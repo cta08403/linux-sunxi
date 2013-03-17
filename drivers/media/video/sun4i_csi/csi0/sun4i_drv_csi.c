@@ -85,6 +85,7 @@
 #define MIN_HEIGHT (32)
 #define MAX_WIDTH  (4096)
 #define MAX_HEIGHT (4096)
+#define CAPTURE_FRAME 1
 
 static unsigned video_nr = 0;
 static unsigned first_flag = 0;
@@ -96,7 +97,7 @@ static uint i2c_addr = 0xff;
 static char ccm_b[I2C_NAME_SIZE] = "";
 static uint i2c_addr_b = 0xff;
 
-
+long unsigned int sec,usec;
 static struct ccm_config ccm_cfg[NUM_INPUTS] = {
 	{
 		.i2c_addr = 0xff,
@@ -124,134 +125,347 @@ static struct i2c_board_info  dev_sensor[] =  {
 
 //ccm support format
 static struct csi_fmt formats[] = {
+	//8bit
 	{
 		.name     		= "planar YUV 422",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YUYV8_2X8,//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_YUV422P,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_YUV422,
 		.output_fmt		= CSI_PLANAR_YUV422,
+		.csi_field		= CSI_ODD,
 		.depth    		= 16,
 		.planes_cnt		= 3,
 	},
 	{
 		.name     		= "planar YUV 420",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YUYV8_2X8,	//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_YUV420,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_YUV422,
 		.output_fmt		= CSI_PLANAR_YUV420,
+		.csi_field		= CSI_ODD,
 		.depth    		= 12,
 		.planes_cnt		= 3,
 	},
 	{
 		.name     		= "planar YUV 422 UV combined",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YUYV8_2X8,	//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_NV16,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_YUV422,
 		.output_fmt		= CSI_UV_CB_YUV422,
+		.csi_field		= CSI_ODD,
 		.depth    		= 16,
 		.planes_cnt		= 2,
 	},
 	{
 		.name     		= "planar YUV 420 UV combined",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YUYV8_2X8,	//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_NV12,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_YUV422,
 		.output_fmt		= CSI_UV_CB_YUV420,
+		.csi_field		= CSI_ODD,
 		.depth    		= 12,
 		.planes_cnt		= 2,
 	},
 	{
 		.name     		= "planar YUV 422 VU combined",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YUYV8_2X8,	//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_NV61,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_YUV422,
 		.output_fmt		= CSI_UV_CB_YUV422,
+		.csi_field		= CSI_ODD,
 		.depth    		= 16,
 		.planes_cnt		= 2,
 	},
 	{
 		.name     		= "planar YUV 420 VU combined",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YUYV8_2X8,	//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_NV21,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_YUV422,
 		.output_fmt		= CSI_UV_CB_YUV420,
+		.csi_field		= CSI_ODD,
 		.depth    		= 12,
 		.planes_cnt		= 2,
 	},
 	{
 		.name     		= "MB YUV420",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YUYV8_2X8,	//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_HM12,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_YUV422,
 		.output_fmt		= CSI_MB_YUV420,
+		.csi_field		= CSI_ODD,
 		.depth    		= 12,
 		.planes_cnt		= 2,
 	},
 	{
 		.name     		= "RAW Bayer",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_SBGGR8_1X8,	//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_SBGGR8,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_RAW,
 		.output_fmt		= CSI_PASS_THROUTH,
+		.csi_field		= CSI_ODD,
 		.depth    		= 8,
 		.planes_cnt		= 1,
 	},
 //	{
 //		.name     		= "planar RGB242",
+//		.csi_if				= CSI_IF_HV8,
 //		.ccm_fmt			= V4L2_PIX_FMT_SBGGR8,	
 //		.fourcc   		= V4L2_PIX_FMT_RGB32,		//can't find the appropriate format in V4L2 define,use this temporarily
+//		.field				= V4L2_FIELD_NONE,
 //		.input_fmt		= CSI_BAYER,
 //		.output_fmt		= CSI_PLANAR_RGB242,
+//		.csi_field		= CSI_ODD,
 //		.depth    		= 8,
 //		.planes_cnt		= 3,
 //	},
 	{
 		.name     		= "YUV422 YUYV",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YUYV8_2X8,//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_YUYV,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_RAW,
 		.output_fmt		= CSI_PASS_THROUTH,
+		.csi_field		= CSI_ODD,
 		.depth    		= 16,
 		.planes_cnt		= 1,
 	},
 	{
 		.name     		= "YUV422 YVYU",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_YVYU8_2X8,//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_YVYU,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_RAW,
 		.output_fmt		= CSI_PASS_THROUTH,
+		.csi_field		= CSI_ODD,
 		.depth    		= 16,
 		.planes_cnt		= 1,
 	},
 	{
 		.name     		= "YUV422 UYVY",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_UYVY,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_RAW,
 		.output_fmt		= CSI_PASS_THROUTH,
+		.csi_field		= CSI_ODD,
 		.depth    		= 16,
 		.planes_cnt		= 1,
 	},
 	{
 		.name     		= "YUV422 VYUY",
+		.csi_if				= CSI_IF_HV8,
 		.ccm_fmt			= V4L2_MBUS_FMT_VYUY8_2X8,//linux-3.0
 		.fourcc   		= V4L2_PIX_FMT_VYUY,
+		.field				= V4L2_FIELD_NONE,
 		.input_fmt		= CSI_RAW,
 		.output_fmt		= CSI_PASS_THROUTH,
+		.csi_field		= CSI_ODD,
 		.depth    		= 16,
 		.planes_cnt		= 1,
 	},
+	//16bit
+	{
+		.name     		= "planar YUV 422",
+		.csi_if				= CSI_IF_CCIR656_16,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_YUV422P,
+		.field				= V4L2_FIELD_NONE,
+		.input_fmt		= CSI_YUV422_16,
+		.output_fmt		= CSI_PLANAR_YUV422,
+		.csi_field		= CSI_ODD,
+		.depth    		= 16,
+		.planes_cnt		= 3,
+	},
+	{
+		.name     		= "planar YUV 420",
+		.csi_if				= CSI_IF_CCIR656_16,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_YUV420,
+		.field				= V4L2_FIELD_NONE,
+		.input_fmt		= CSI_YUV422_16,
+		.output_fmt		= CSI_PLANAR_YUV420,
+		.csi_field		= CSI_ODD,
+		.depth    		= 12,
+		.planes_cnt		= 3,
+	},
+	{
+		.name     		= "planar YUV 422 UV combined",
+		.csi_if				= CSI_IF_CCIR656_16,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_NV16,
+		.field				= V4L2_FIELD_NONE,
+		.input_fmt		= CSI_YUV422_16,
+		.output_fmt		= CSI_UV_CB_YUV422,
+		.csi_field		= CSI_ODD,
+		.depth    		= 16,
+		.planes_cnt		= 2,
+	},
+	{
+		.name     		= "planar YUV 420 UV combined",
+		.csi_if				= CSI_IF_CCIR656_16,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_NV12,
+		.field				= V4L2_FIELD_NONE,
+		.input_fmt		= CSI_YUV422_16,
+		.output_fmt		= CSI_UV_CB_YUV420,
+		.csi_field		= CSI_ODD,
+		.depth    		= 12,
+		.planes_cnt		= 2,
+	},
+	{
+		.name     		= "MB YUV420",
+		.csi_if				= CSI_IF_CCIR656_16,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_HM12,
+		.field				= V4L2_FIELD_NONE,
+		.input_fmt		= CSI_YUV422_16,
+		.output_fmt		= CSI_MB_YUV420,
+		.csi_field		= CSI_ODD,
+		.depth    		= 12,
+		.planes_cnt		= 2,
+	},
+	//BT656 8bit
+	{
+		.name     		= "planar YUV 422",
+		.csi_if				= CSI_IF_CCIR656,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_YUV422P,
+		.field				= V4L2_FIELD_INTERLACED,
+		.input_fmt		= CSI_CCIR656,
+		.output_fmt		= CSI_FRAME_PLANAR_YUV422,
+		.csi_field		= CSI_ODD,
+		.depth    		= 16,
+		.planes_cnt		= 3,
+	},
+	{
+		.name     		= "planar YUV 420",
+		.csi_if				= CSI_IF_CCIR656,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_YUV420,
+		.field				= V4L2_FIELD_INTERLACED,
+		.input_fmt		= CSI_CCIR656,
+		.output_fmt		= CSI_FRAME_PLANAR_YUV420,
+		.csi_field		= CSI_ODD,
+		.depth    		= 12,
+		.planes_cnt		= 3,
+	},
+	{
+		.name     		= "planar YUV 422 UV combined",
+		.csi_if				= CSI_IF_CCIR656,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_NV16,
+		.field				= V4L2_FIELD_INTERLACED,
+		.input_fmt		= CSI_CCIR656,
+		.output_fmt		= CSI_FRAME_UV_CB_YUV422,
+		.csi_field		= CSI_ODD,
+		.depth    		= 16,
+		.planes_cnt		= 2,
+	},
+	{
+		.name     		= "planar YUV 420 UV combined",
+		.csi_if				= CSI_IF_CCIR656,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_NV12,
+		.field				= V4L2_FIELD_INTERLACED,
+		.input_fmt		= CSI_CCIR656,
+		.output_fmt		= CSI_FRAME_UV_CB_YUV420,
+		.csi_field		= CSI_ODD,
+		.depth    		= 12,
+		.planes_cnt		= 2,
+	},
+	{
+		.name     		= "planar YUV 422 VU combined",
+		.csi_if				= CSI_IF_CCIR656,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_NV61,
+		.field				= V4L2_FIELD_INTERLACED,
+		.input_fmt		= CSI_CCIR656,
+		.output_fmt		= CSI_FRAME_UV_CB_YUV422,
+		.csi_field		= CSI_ODD,
+		.depth    		= 16,
+		.planes_cnt		= 2,
+	},
+	{
+		.name     		= "planar YUV 420 VU combined",
+		.csi_if				= CSI_IF_CCIR656,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_NV21,
+		.field				= V4L2_FIELD_INTERLACED,
+		.input_fmt		= CSI_CCIR656,
+		.output_fmt		= CSI_FRAME_UV_CB_YUV420,
+		.csi_field		= CSI_ODD,
+		.depth    		= 12,
+		.planes_cnt		= 2,
+	},
+	{
+		.name     		= "MB YUV420",
+		.csi_if				= CSI_IF_CCIR656,
+		.ccm_fmt			= V4L2_MBUS_FMT_UYVY8_2X8,	//linux-3.0
+		.fourcc   		= V4L2_PIX_FMT_HM12,
+		.field				= V4L2_FIELD_INTERLACED,
+		.input_fmt		= CSI_CCIR656,
+		.output_fmt		= CSI_FRAME_MB_YUV420,
+		.csi_field		= CSI_ODD,
+		.depth    		= 12,
+		.planes_cnt		= 2,
+	},	
 };
 
-static struct csi_fmt *get_format(struct v4l2_format *f)
+static struct csi_fmt *get_format(struct csi_dev *dev, struct v4l2_format *f)
 {
 	struct csi_fmt *fmt;
+	struct v4l2_mbus_framefmt ccm_fmt;//linux-3.0
 	unsigned int k;
-
+	int ret;
+	
 	for (k = 0; k < ARRAY_SIZE(formats); k++) {
 		fmt = &formats[k];
-		if (fmt->fourcc == f->fmt.pix.pixelformat) {
-			break;
+		if (fmt->csi_if == dev->interface) {
+			csi_dbg(0,"interface ok dev->interface = %d!\n",dev->interface);
+			if (fmt->fourcc == f->fmt.pix.pixelformat) {
+				csi_dbg(0,"fourcc fmt ok!\n");
+				ccm_fmt.code = fmt->ccm_fmt;//linux-3.0
+				ccm_fmt.field = f->fmt.pix.field;
+				ccm_fmt.width = f->fmt.pix.width;//linux-3.0
+				ccm_fmt.height = f->fmt.pix.height;//linux-3.0		
+				ret = v4l2_subdev_call(dev->sd,video,try_mbus_fmt,&ccm_fmt);//linux-3.0
+				if (ret < 0) {
+					csi_err("v4l2 sub device try_fmt error!\n");
+					return NULL;
+				}
+				//info got from module
+				f->fmt.pix.field = ccm_fmt.field;//linux-3.0
+				f->fmt.pix.width = ccm_fmt.width;//linux-3.0
+				f->fmt.pix.height = ccm_fmt.height;//linux-3.0
+//				f->fmt.pix.bytesperline = ccm_fmt.fmt.pix.bytesperline;//linux-3.0
+//				f->fmt.pix.sizeimage = ccm_fmt.fmt.pix.sizeimage;//linux-3.0
+				
+				if(ccm_fmt.field == fmt->field) {
+					csi_dbg(0,"field ok!\n");
+					break;
+				}
+				else
+					continue;
+			}
 		}
 	}
 
@@ -261,12 +475,6 @@ static struct csi_fmt *get_format(struct v4l2_format *f)
 
 	return &formats[k];
 };
-
-void static inline bsp_csi_set_buffer_address(struct csi_dev *dev,__csi_buf_t buf, u32 addr)
-{
-	//bufer0a +4 = buffer0b, bufer0a +8 = buffer1a
-    W(dev->regs+CSI_REG_BUF_0_A + (buf<<2), addr); 
-}
 
 static inline void csi_set_addr(struct csi_dev *dev,struct csi_buffer *buffer)
 {
@@ -292,7 +500,34 @@ static inline void csi_set_addr(struct csi_dev *dev,struct csi_buffer *buffer)
 
 	}else if(dev->fmt->input_fmt==CSI_CCIR656){
 	//TODO:
+		switch (dev->fmt->output_fmt) {
+			case CSI_FRAME_PLANAR_YUV422:
+				dev->csi_buf_addr.y  = addr_org;
+				dev->csi_buf_addr.cb = addr_org + dev->width*dev->height;
+				dev->csi_buf_addr.cr = addr_org + dev->width*dev->height*3/2;
+				break;
 
+			case CSI_FRAME_PLANAR_YUV420:
+				dev->csi_buf_addr.y  = addr_org;
+				dev->csi_buf_addr.cb = addr_org + dev->width*dev->height;
+				dev->csi_buf_addr.cr = addr_org + dev->width*dev->height*5/4;
+				break;
+				
+			case CSI_FRAME_UV_CB_YUV422:
+			case CSI_FRAME_UV_CB_YUV420:
+			case CSI_FRAME_MB_YUV422:
+			case CSI_FRAME_MB_YUV420:
+				dev->csi_buf_addr.y  = addr_org;
+				dev->csi_buf_addr.cb = addr_org + dev->width*dev->height;
+				dev->csi_buf_addr.cr = addr_org + dev->width*dev->height;
+				break;
+
+			default:
+				dev->csi_buf_addr.y  = addr_org;
+				dev->csi_buf_addr.cb = addr_org + dev->width*dev->height;
+				dev->csi_buf_addr.cr = addr_org + dev->width*dev->height*3/2;
+				break;
+		}
 	}else if(dev->fmt->input_fmt==CSI_YUV422){
 		
 		switch (dev->fmt->output_fmt) {
@@ -318,10 +553,20 @@ static inline void csi_set_addr(struct csi_dev *dev,struct csi_buffer *buffer)
 				break;
 
 			default:
+				dev->csi_buf_addr.y  = addr_org;
+				dev->csi_buf_addr.cb = addr_org + dev->width*dev->height;
+				dev->csi_buf_addr.cr = addr_org + dev->width*dev->height*3/2;
 				break;
 		}
+	}else if(dev->fmt->input_fmt==CSI_YUV422_16){
+		//TODO
 	}
-	
+	else {
+		dev->csi_buf_addr.y  = addr_org;
+		dev->csi_buf_addr.cb = addr_org;
+		dev->csi_buf_addr.cr = addr_org;
+	}
+
 	bsp_csi_set_buffer_address(dev, CSI_BUF_0_A, dev->csi_buf_addr.y);
 	bsp_csi_set_buffer_address(dev, CSI_BUF_0_B, dev->csi_buf_addr.y);
 	bsp_csi_set_buffer_address(dev, CSI_BUF_1_A, dev->csi_buf_addr.cb);
@@ -420,6 +665,32 @@ static int csi_clk_get(struct csi_dev *dev)
 static int csi_clk_out_set(struct csi_dev *dev)
 {
 	int ret;
+	
+	if(dev->ccm_info->mclk==24000000 || dev->ccm_info->mclk==12000000 || dev->ccm_info->mclk==6000000)
+	{
+		dev->csi_clk_src=clk_get(NULL,"hosc");
+		if (dev->csi_clk_src == NULL) {
+	    csi_err("get csi0 hosc source clk error!\n");	
+			return -1;
+	  }
+	}
+	else
+	{
+		dev->csi_clk_src=clk_get(NULL,"video_pll1");
+		if (dev->csi_clk_src == NULL) {
+	    csi_err("get csi0 video pll1 source clk error!\n");	
+			return -1;
+	  }
+	}  
+	
+	ret = clk_set_parent(dev->csi_module_clk, dev->csi_clk_src);
+	if (ret == -1) {
+	  csi_err(" csi set parent failed \n");
+	  return -1;
+	}
+	   
+	clk_put(dev->csi_clk_src);
+		
 	ret = clk_set_rate(dev->csi_module_clk, dev->ccm_info->mclk);
 	if (ret == -1) {
 		csi_err("set csi0 module clock error\n");
@@ -502,65 +773,105 @@ static int update_ccm_info(struct csi_dev *dev , struct ccm_config *ccm_cfg)
 	 dev->iovdd = ccm_cfg->iovdd;
 	 dev->avdd = ccm_cfg->avdd;
 	 dev->dvdd = ccm_cfg->dvdd;
+	 dev->reset_io    = ccm_cfg->reset_io;    
+	 dev->standby_io  = ccm_cfg->standby_io;  
+	 dev->power_io    = ccm_cfg->power_io;    
+	 dev->flash_io    = ccm_cfg->flash_io;    
+	 dev->af_power_io = ccm_cfg->af_power_io; 
+	
 	 return v4l2_subdev_call(dev->sd,core,ioctl,CSI_SUBDEV_CMD_SET_INFO,dev->ccm_info);
 }
-
-void static inline bsp_csi_int_clear_status(struct csi_dev *dev,__csi_int_t interrupt)
+/*
+void inline bsp_csi_int_clear_status(struct csi_dev *dev,__csi_int_t interrupt)
 {
     W(dev->regs+CSI_REG_INT_STATUS, interrupt);
-}
+}*/
 
 static irqreturn_t csi_isr(int irq, void *priv)
 {
 	struct csi_buffer *buf;	
 	struct csi_dev *dev = (struct csi_dev *)priv;
 	struct csi_dmaqueue *dma_q = &dev->vidq;
-//	__csi_int_status_t * status;
+	__csi_int_status_t status;
 
 	csi_dbg(3,"csi_isr\n");
-	bsp_csi_int_disable(dev,CSI_INT_FRAME_DONE);//CSI_INT_FRAME_DONE
+/*	bsp_csi_int_disable(dev,CSI_INT_FRAME_DONE);*/ //CSI_INT_FRAME_DONE
 	
 	spin_lock(&dev->slock);
-	
-	if (first_flag == 0) {
-		first_flag=1;
-		goto set_next_addr;
-	}
-	
-	if (list_empty(&dma_q->active)) {		
-		csi_err("No active queue to serve\n");		
+	bsp_csi_int_get_status(dev, &status);
+	csi_dbg(3,"status vsync = %d, framedone = %d, capdone = %d\n",status.vsync_trig,status.frame_done,status.capture_done);
+	if (dev->capture_mode == V4L2_MODE_IMAGE) {	
+		bsp_csi_int_disable(dev,CSI_INT_VSYNC_TRIG);
+		bsp_csi_int_disable(dev,CSI_INT_CAPTURE_DONE);
+		if (first_flag < CAPTURE_FRAME) {
+			csi_print("frame %d\n",first_flag+1);
+			if (first_flag == CAPTURE_FRAME-1) {
+				csi_print("single capture start!\n");	
+				bsp_csi_capture_video_stop(dev);
+				bsp_csi_capture_picture(dev);
+			}
+			first_flag++;
+			goto unlock;
+		}
+		csi_print("capture image mode!\n");	
+		buf = list_entry(dma_q->active.next,struct csi_buffer, vb.queue);
+		csi_dbg(3,"buf ptr=%p\n",buf);
+		list_del(&buf->vb.queue);
+		buf->vb.state = VIDEOBUF_DONE;
+		wake_up(&buf->vb.done);
 		goto unlock;	
-	}
+	} else {
+		bsp_csi_int_disable(dev,CSI_INT_FRAME_DONE);
+		if (first_flag == 0) {
+			first_flag++;
+			csi_print("capture video mode!\n");
+			goto set_next_addr;
+		}
+		
+		if (first_flag == 1) {
+			first_flag++;
+			csi_print("capture video first frame done!\n");
+		}
+		
+		if (list_empty(&dma_q->active)) {		
+			csi_err("No active queue to serve\n");		
+			goto unlock;	
+		}
+		
+		buf = list_entry(dma_q->active.next,struct csi_buffer, vb.queue);
+		csi_dbg(3,"buf ptr=%p\n",buf);
 	
-	buf = list_entry(dma_q->active.next,struct csi_buffer, vb.queue);
-	csi_dbg(3,"buf ptr=%p\n",buf);
-
-	/* Nobody is waiting on this buffer*/	
-
-	if (!waitqueue_active(&buf->vb.done)) {
-		csi_dbg(1," Nobody is waiting on this buffer,buf = 0x%p\n",buf);					
-	}
+		/* Nobody is waiting on this buffer*/	
 	
-	list_del(&buf->vb.queue);
-
-	do_gettimeofday(&buf->vb.ts);
-	buf->vb.field_count++;
-
-	dev->ms += jiffies_to_msecs(jiffies - dev->jiffies);
-	dev->jiffies = jiffies;
-
-	buf->vb.state = VIDEOBUF_DONE;
-	wake_up(&buf->vb.done);
+		if (!waitqueue_active(&buf->vb.done)) {
+			csi_dbg(1," Nobody is waiting on this buffer,buf = 0x%p\n",buf);					
+		}
+		
+		list_del(&buf->vb.queue);
 	
-	//judge if the frame queue has been written to the last
-	if (list_empty(&dma_q->active)) {		
-		csi_dbg(1,"No more free frame\n");		
-		goto unlock;	
-	}
+		do_gettimeofday(&buf->vb.ts);
+		buf->vb.field_count++;
+#if DBG_EN == 1		
+		csi_dbg(1,"frame interval = %ld\n",buf->vb.ts.tv_sec*1000000+buf->vb.ts.tv_usec - (sec*1000000+usec));
+		sec = buf->vb.ts.tv_sec;
+		usec = buf->vb.ts.tv_usec;
+#endif
+		dev->ms += jiffies_to_msecs(jiffies - dev->jiffies);
+		dev->jiffies = jiffies;
 	
-	if ((&dma_q->active) == dma_q->active.next->next) {
-		csi_dbg(1,"No more free frame on next time\n");		
-		goto unlock;	
+		buf->vb.state = VIDEOBUF_DONE;
+		wake_up(&buf->vb.done);
+		
+		//judge if the frame queue has been written to the last
+		if (list_empty(&dma_q->active)) {		
+			csi_dbg(1,"No more free frame\n");		
+			goto unlock;	
+		}
+		
+		if ((&dma_q->active) == dma_q->active.next->next) {
+			csi_dbg(1,"No more free frame on next time\n");		
+			goto unlock;	
+		}
 	}
 	
 	
@@ -569,23 +880,36 @@ set_next_addr:
 	csi_set_addr(dev,buf);
 
 unlock:
+	bsp_csi_int_get_status(dev, &status);
+	if((status.buf_0_overflow) || (status.buf_1_overflow) || (status.buf_2_overflow) || (status.hblank_overflow))
+	{
+		if((status.buf_0_overflow) || (status.buf_1_overflow) || (status.buf_2_overflow)) {
+			bsp_csi_int_clear_status(dev,CSI_INT_BUF_0_OVERFLOW);
+			bsp_csi_int_clear_status(dev,CSI_INT_BUF_1_OVERFLOW);
+			bsp_csi_int_clear_status(dev,CSI_INT_BUF_2_OVERFLOW);
+			csi_err("fifo overflow\n");
+		}
+		
+		if(status.hblank_overflow) {
+			bsp_csi_int_clear_status(dev,CSI_INT_HBLANK_OVERFLOW);
+			csi_err("hblank overflow\n");
+		}
+		csi_err("reset csi module\n");
+		bsp_csi_close(dev);
+		bsp_csi_open(dev);
+	}
+		
 	spin_unlock(&dev->slock);
-//	bsp_csi_int_get_status(dev, status);
-//	if((status->buf_0_overflow) || (status->buf_1_overflow) || (status->buf_2_overflow))
-//	{
-//		bsp_csi_int_clear_status(dev,CSI_INT_BUF_0_OVERFLOW);
-//		bsp_csi_int_clear_status(dev,CSI_INT_BUF_1_OVERFLOW);
-//		bsp_csi_int_clear_status(dev,CSI_INT_BUF_2_OVERFLOW);
-//		csi_err("fifo overflow\n");
-//	}
-//	
-//	if((status->hblank_overflow))
-//	{
-//		bsp_csi_int_clear_status(dev,CSI_INT_HBLANK_OVERFLOW);
-//		csi_err("hblank overflow\n");
-//	}
-	bsp_csi_int_clear_status(dev,CSI_INT_FRAME_DONE);//CSI_INT_FRAME_DONE
-	bsp_csi_int_enable(dev,CSI_INT_FRAME_DONE);//CSI_INT_FRAME_DONE
+	
+	if (dev->capture_mode == V4L2_MODE_IMAGE) {	
+		bsp_csi_int_clear_status(dev,CSI_INT_VSYNC_TRIG);
+		bsp_csi_int_clear_status(dev,CSI_INT_CAPTURE_DONE);
+		bsp_csi_int_enable(dev,CSI_INT_VSYNC_TRIG);
+		bsp_csi_int_enable(dev,CSI_INT_CAPTURE_DONE);
+	} else {
+		bsp_csi_int_clear_status(dev,CSI_INT_FRAME_DONE);
+		bsp_csi_int_enable(dev,CSI_INT_FRAME_DONE);
+	}
 	
 	return IRQ_HANDLED;
 }
@@ -596,6 +920,7 @@ unlock:
 static int buffer_setup(struct videobuf_queue *vq, unsigned int *count, unsigned int *size)
 {
 	struct csi_dev *dev = vq->priv_data;
+	int buf_max_flag = 0;
 	
 	csi_dbg(1,"buffer_setup\n");
 	
@@ -620,6 +945,21 @@ static int buffer_setup(struct videobuf_queue *vq, unsigned int *count, unsigned
 	else if(dev->fmt->input_fmt == CSI_CCIR656)
 	{
 		//TODO
+		switch (dev->fmt->output_fmt) {
+			case CSI_FRAME_PLANAR_YUV422:
+			case CSI_FRAME_UV_CB_YUV422:
+			case CSI_FRAME_MB_YUV422:
+				*size = dev->width * dev->height * 2;
+				break;
+			case CSI_FRAME_PLANAR_YUV420:
+			case CSI_FRAME_UV_CB_YUV420:
+			case CSI_FRAME_MB_YUV420:
+				*size = dev->width * dev->height * 3/2;
+				break;
+				break;
+			default:
+				break;
+		}
 	}
 	else if(dev->fmt->input_fmt == CSI_YUV422)
 	{
@@ -641,6 +981,9 @@ static int buffer_setup(struct videobuf_queue *vq, unsigned int *count, unsigned
 				break;
 		}
 	}
+	else if(dev->fmt->input_fmt==CSI_YUV422_16){
+		//TODO
+	}
 	else
 	{
 		*size = dev->width * dev->height * 2;	
@@ -658,7 +1001,25 @@ static int buffer_setup(struct videobuf_queue *vq, unsigned int *count, unsigned
 
 	while (*size * *count > CSI_MAX_FRAME_MEM) {
 		(*count)--;
+		buf_max_flag = 1;
+		if(*count == 0)
+			csi_err("one buffer size larger than max frame memory! buffer count = %d\n,",*count);
 	}	
+	
+	if(buf_max_flag == 0) {
+		if(dev->capture_mode == V4L2_MODE_IMAGE) {
+			if (*count != 1) {
+				*count = 1;
+				csi_err("buffer count is set to 1 in image capture mode\n");
+			}
+		} else {
+			if (*count < 3) {
+				*count = 3;
+				csi_err("buffer count is invalid, set to 3 in video capture\n");
+			}
+		}
+	}
+
 	csi_print("%s, buffer count=%d, size=%d\n", __func__,*count, *size);
 
 	return 0;
@@ -817,7 +1178,7 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 		f->fmt.pix.height = MAX_HEIGHT;
 	}
 
-	csi_fmt = get_format(f);
+	csi_fmt = get_format(dev,f);
 	if (!csi_fmt) {
 		csi_err("Fourcc format (0x%08x) invalid.\n",f->fmt.pix.pixelformat);
 		return -EINVAL;
@@ -874,7 +1235,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 		goto out;
 	}
 		
-	csi_fmt = get_format(f);
+	csi_fmt = get_format(dev,f);
 	if (!csi_fmt) {
 		csi_err("Fourcc format (0x%08x) invalid.\n",f->fmt.pix.pixelformat);
 		ret	= -EINVAL;
@@ -883,7 +1244,8 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	
 	ccm_fmt.code = csi_fmt->ccm_fmt;//linux-3.0
 	ccm_fmt.width = f->fmt.pix.width;//linux-3.0
-	ccm_fmt.height = f->fmt.pix.width;//linux-3.0
+	ccm_fmt.height = f->fmt.pix.height;//linux-3.0
+	ccm_fmt.field = f->fmt.pix.field;//linux-3.0
 	
 	ret = v4l2_subdev_call(dev->sd,video,s_mbus_fmt,&ccm_fmt);//linux-3.0
 	if (ret < 0) {
@@ -893,13 +1255,14 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	
 	//save the current format info
 	dev->fmt = csi_fmt;
-	dev->vb_vidq.field = f->fmt.pix.field;
-	dev->width  = f->fmt.pix.width;
-	dev->height = f->fmt.pix.height;
+	dev->vb_vidq.field = ccm_fmt.field;//f->fmt.pix.field;
+	dev->width  = ccm_fmt.width;//f->fmt.pix.width;
+	dev->height = ccm_fmt.height;//f->fmt.pix.height;
 	
 	//set format
 	dev->csi_mode.output_fmt = dev->fmt->output_fmt;
 	dev->csi_mode.input_fmt = dev->fmt->input_fmt;
+	dev->csi_mode.field_sel = dev->fmt->csi_field;
 	
 	switch(dev->fmt->ccm_fmt) {
 	case V4L2_MBUS_FMT_YUYV8_2X8://linux-3.0
@@ -943,9 +1306,18 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 		height_buf = dev->height;
 		break;
 	case CSI_CCIR656://TODO
+		width_len  = dev->width;
+		width_buf = dev->width*2;
+		height_buf = dev->height/2;
+		break;
 	case CSI_YUV422:
 		width_len  = dev->width;
 		width_buf = dev->width*2;
+		height_buf = dev->height;
+		break;
+	case CSI_YUV422_16://TODO
+		width_len  = dev->width;
+		width_buf = dev->width;
 		height_buf = dev->height;
 		break;
 	default:
@@ -957,6 +1329,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 
 	bsp_csi_configure(dev,&dev->csi_mode);
 	//horizontal and vertical offset are constant zero
+	bsp_csi_set_offset(dev,dev->hstart,dev->vstart);
 	bsp_csi_set_size(dev,width_buf,height_buf,width_len);
 
 	ret = 0;
@@ -1039,9 +1412,17 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 	buf = list_entry(dma_q->active.next,struct csi_buffer, vb.queue);
 	csi_set_addr(dev,buf);
 	
-	bsp_csi_int_clear_status(dev,CSI_INT_FRAME_DONE);//CSI_INT_FRAME_DONE
-	bsp_csi_int_enable(dev, CSI_INT_FRAME_DONE);//CSI_INT_FRAME_DONE
-	bsp_csi_capture_video_start(dev);
+	if (dev->capture_mode == V4L2_MODE_IMAGE) {
+		bsp_csi_int_clear_status(dev,CSI_INT_VSYNC_TRIG);
+		bsp_csi_int_clear_status(dev,CSI_INT_CAPTURE_DONE);
+		bsp_csi_int_enable(dev,CSI_INT_VSYNC_TRIG);
+		bsp_csi_int_enable(dev,CSI_INT_CAPTURE_DONE);
+		bsp_csi_capture_video_start(dev);
+	} else {
+		bsp_csi_int_clear_status(dev,CSI_INT_FRAME_DONE);
+		bsp_csi_int_enable(dev, CSI_INT_FRAME_DONE);
+		bsp_csi_capture_video_start(dev);
+	}	
 	
 	csi_start_generating(dev);
 	return 0;
@@ -1070,9 +1451,15 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 	dma_q->frame = 0;
 	dma_q->ini_jiffies = jiffies;
 	
-	bsp_csi_int_disable(dev,CSI_INT_FRAME_DONE);//CSI_INT_FRAME_DONE
-	bsp_csi_int_clear_status(dev,CSI_INT_FRAME_DONE);//CSI_INT_FRAME_DONE
+	bsp_csi_int_disable(dev,CSI_INT_VSYNC_TRIG);
+	bsp_csi_int_disable(dev,CSI_INT_CAPTURE_DONE);
+	bsp_csi_int_disable(dev,CSI_INT_FRAME_DONE);
+	bsp_csi_int_clear_status(dev, CSI_INT_VSYNC_TRIG);
+	bsp_csi_int_clear_status(dev,CSI_INT_CAPTURE_DONE);
+	bsp_csi_int_clear_status(dev, CSI_INT_FRAME_DONE);
+	
 	bsp_csi_capture_video_stop(dev);
+	
 	
 	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		return -EINVAL;
@@ -1130,14 +1517,14 @@ static int internal_s_input(struct csi_dev *dev, unsigned int i)
 		return 0;
 	
 	csi_dbg(0,"input_num = %d\n",i);
-	
+
 //	spin_lock(&dev->slock);
-	
-	/*Power down current device*/
-	ret = v4l2_subdev_call(dev->sd,core, s_power, CSI_SUBDEV_STBY_ON);
-	if(ret < 0)
-		goto altend;
-	
+	if(dev->input != -1) {
+		/*Power down current device*/
+		ret = v4l2_subdev_call(dev->sd,core, s_power, CSI_SUBDEV_STBY_ON);
+		if(ret < 0)
+			goto altend;
+	}
 	/* Alternate the device info and select target device*/
   ret = update_ccm_info(dev, dev->ccm_cfg[i]);
   if (ret < 0)
@@ -1196,10 +1583,15 @@ altend:
 	
 recover:
 	/*Power down target device*/
+	if (dev->input == -1) {
+		dev->input = (i ==0 ? 1 : 0 );
+	}
 	ret = v4l2_subdev_call(dev->sd,core, s_power, CSI_SUBDEV_STBY_ON);
 	if(ret < 0)
+	{	
+		csi_err("sensor standby on error at current device!\n");
 		goto altend;
-
+	}
 	/* Alternate the device info and select the current device*/
   ret = update_ccm_info(dev, dev->ccm_cfg[dev->input]);
   if (ret < 0)
@@ -1302,6 +1694,14 @@ static int vidioc_s_parm(struct file *file, void *priv,
 	struct csi_dev *dev = video_drvdata(file);
 	int ret;
 	
+	if(parms->parm.capture.capturemode != V4L2_MODE_VIDEO && \
+		parms->parm.capture.capturemode != V4L2_MODE_IMAGE) {
+		
+		parms->parm.capture.capturemode = V4L2_MODE_VIDEO;
+	}
+	
+	dev->capture_mode = parms->parm.capture.capturemode;
+	
 	ret = v4l2_subdev_call(dev->sd,video,s_parm,parms);
 	if (ret < 0)
 		csi_err("v4l2 sub device s_parm error!\n");
@@ -1342,7 +1742,7 @@ static int csi_open(struct file *file)
 {
 	struct csi_dev *dev = video_drvdata(file);
 	int ret,input_num;
-	struct v4l2_control ctrl;
+	/*struct v4l2_control ctrl;*/
 	
 	csi_dbg(0,"csi_open\n");
 
@@ -1354,13 +1754,30 @@ static int csi_open(struct file *file)
 	csi_clk_enable(dev);
 	csi_reset_disable(dev);
 	
-	//open all the device power and set it to standby on
-	for (input_num=dev->dev_qty-1; input_num>=0; input_num--) {
-		/* update target device info and select it*/
-		ret = update_ccm_info(dev, dev->ccm_cfg[input_num]);
-		if (ret < 0)
-		{
-			csi_err("Error when set ccm info when csi open!\n");
+	if(dev->stby_mode == 1)	{
+		//open all the device power and set it to standby on
+		for (input_num=dev->dev_qty-1; input_num>=0; input_num--) {
+			/* update target device info and select it*/
+			ret = update_ccm_info(dev, dev->ccm_cfg[input_num]);
+			if (ret < 0)
+			{
+				csi_err("Error when set ccm info when csi open!\n");
+			}
+			
+			dev->csi_mode.vref       = dev->ccm_info->vref;
+		  dev->csi_mode.href       = dev->ccm_info->href;
+		  dev->csi_mode.clock      = dev->ccm_info->clock;
+			csi_clk_out_set(dev);
+			
+			ret = v4l2_subdev_call(dev->sd,core, s_power, CSI_SUBDEV_PWR_ON);
+		  if (ret!=0) {
+		  	csi_err("sensor CSI_SUBDEV_PWR_ON error at device number %d when csi open!\n",input_num);
+		  }
+	
+			ret = v4l2_subdev_call(dev->sd,core, s_power, CSI_SUBDEV_STBY_ON);
+			if (ret!=0) {
+		  	csi_err("sensor CSI_SUBDEV_STBY_ON error at device number %d when csi open!\n",input_num);
+		  } 
 		}
 		
 		dev->csi_mode.vref       = dev->ccm_info->vref;
@@ -1379,39 +1796,11 @@ static int csi_open(struct file *file)
 	  } 
 	}
 	
-	dev->input=0;//default input
-
+	dev->input=-1;//default input null
+	dev->hstart = 0;
+	dev->vstart = 0;//h and v offset is initialed to zero
+	
 	bsp_csi_open(dev);
-	bsp_csi_set_offset(dev,0,0);//h and v offset is initialed to zero
-	
-	ret = v4l2_subdev_call(dev->sd,core, s_power, CSI_SUBDEV_STBY_OFF);
-	if (ret!=0) {
-	  csi_err("sensor standby off error when csi open!\n");
-	  return ret;
-	}
-	
-	ret = v4l2_subdev_call(dev->sd,core, init, 0);
-	if (ret!=0) {
-		csi_err("sensor initial error when csi open!\n");
-		return ret;
-	} else {
-		csi_print("sensor initial success when csi open!\n");
-	}	
-
-	ctrl.id = V4L2_CID_VFLIP;
-	ctrl.value = dev->vflip;
-	ret = v4l2_subdev_call(dev->sd,core, s_ctrl, &ctrl);
-	if (ret!=0) {
-		csi_err("sensor sensor_s_ctrl V4L2_CID_VFLIP error when csi open!\n");
-	}
-	
-	ctrl.id = V4L2_CID_HFLIP;
-	ctrl.value = dev->hflip;
-	ret = v4l2_subdev_call(dev->sd,core, s_ctrl, &ctrl);
-	if (ret!=0) {
-		csi_err("sensor sensor_s_ctrl V4L2_CID_HFLIP error when csi open!\n");
-	}
-	
 	dev->opened = 1;
 	dev->fmt = &formats[5]; //default format
 	return 0;		
@@ -1424,7 +1813,10 @@ static int csi_close(struct file *file)
 	
 	csi_dbg(0,"csi_close\n");
 
-	bsp_csi_int_disable(dev,CSI_INT_FRAME_DONE);//CSI_INT_FRAME_DONE
+	bsp_csi_int_disable(dev,CSI_INT_FRAME_DONE);
+	bsp_csi_int_disable(dev,CSI_INT_VSYNC_TRIG);
+	bsp_csi_int_disable(dev,CSI_INT_CAPTURE_DONE);
+	
 	//bsp_csi_int_clear_status(dev,CSI_INT_FRAME_DONE);
 
 	bsp_csi_capture_video_stop(dev);
@@ -1591,6 +1983,11 @@ static int fetch_config(struct csi_dev *dev)
 			csi_err("fetch csi_dvdd from sys_config failed\n");
 		}
 		
+		/* fetch standby mode */
+		ret = script_parser_fetch("csi0_para","csi_stby_mode", &dev->ccm_cfg[0]->stby_mode , sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_stby_mode from sys_config failed\n");
+		}
 		/* fetch flip issue */
 		ret = script_parser_fetch("csi0_para","csi_vflip", &dev->ccm_cfg[0]->vflip , sizeof(int));
 		if (ret) {
@@ -1605,7 +2002,33 @@ static int fetch_config(struct csi_dev *dev)
 		/* fetch flash light issue */
 		ret = script_parser_fetch("csi0_para","csi_flash_pol", &dev->ccm_cfg[0]->flash_pol , sizeof(int));
 		if (ret) {
-			csi_err("fetch csi0 csi_flash_pol from sys_config failed\n");
+			csi_err("fetch csi_flash_pol from sys_config failed\n");
+		}
+		
+		/* fetch reset/power/standby/flash/af io issue */
+		ret = script_parser_fetch("csi0_para","csi_reset", (int *)&dev->ccm_cfg[0]->reset_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_reset from sys_config failed\n");
+		}
+		
+		ret = script_parser_fetch("csi0_para","csi_stby", (int *)&dev->ccm_cfg[0]->standby_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_stby from sys_config failed\n");
+		}
+		
+		ret = script_parser_fetch("csi0_para","csi_power_en", (int *)&dev->ccm_cfg[0]->power_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_power_en from sys_config failed\n");
+		}
+		
+		ret = script_parser_fetch("csi0_para","csi_flash", (int *)&dev->ccm_cfg[0]->flash_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_flash from sys_config failed\n");
+		}
+		
+		ret = script_parser_fetch("csi0_para","csi_af_en", (int *)&dev->ccm_cfg[0]->af_power_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_af_en from sys_config failed\n");
 		}
 	} 
 	
@@ -1655,22 +2078,54 @@ static int fetch_config(struct csi_dev *dev)
 		if (ret) {
 			csi_err("fetch csi_dvdd_b from sys_config failed\n");
 		}
+
+		/* fetch standby mode */
+		ret = script_parser_fetch("csi0_para","csi_stby_mode", &dev->ccm_cfg[1]->stby_mode , sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_stby_mode from sys_config failed\n");
+		}
 		
 		/* fetch flip issue */
 		ret = script_parser_fetch("csi0_para","csi_vflip_b", &dev->ccm_cfg[1]->vflip , sizeof(int));
 		if (ret) {
-			csi_err("fetch csi0 vflip_b from sys_config failed\n");
+			csi_err("fetch vflip_b from sys_config failed\n");
 		}
 		
 		ret = script_parser_fetch("csi0_para","csi_hflip_b", &dev->ccm_cfg[1]->hflip , sizeof(int));
 		if (ret) {
-			csi_err("fetch csi0 hflip_b from sys_config failed\n");
+			csi_err("fetch hflip_b from sys_config failed\n");
 		}
 		
 		/* fetch flash light issue */
 		ret = script_parser_fetch("csi0_para","csi_flash_pol_b", &dev->ccm_cfg[1]->flash_pol , sizeof(int));
 		if (ret) {
-			csi_err("fetch csi0 csi_flash_pol_b from sys_config failed\n");
+			csi_err("fetch csi_flash_pol_b from sys_config failed\n");
+		}
+		
+		/* fetch reset/power/standby/flash/af io issue */
+		ret = script_parser_fetch("csi0_para","csi_reset_b", (int *)&dev->ccm_cfg[1]->reset_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_reset_b from sys_config failed\n");
+		}
+		
+		ret = script_parser_fetch("csi0_para","csi_stby_b", (int *)&dev->ccm_cfg[1]->standby_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_stby_b from sys_config failed\n");
+		}
+		
+		ret = script_parser_fetch("csi0_para","csi_power_en_b", (int *)&dev->ccm_cfg[1]->power_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_power_en_b from sys_config failed\n");
+		}
+		
+		ret = script_parser_fetch("csi0_para","csi_flash_b", (int *)&dev->ccm_cfg[1]->flash_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_flash_b from sys_config failed\n");
+		}
+		
+		ret = script_parser_fetch("csi0_para","csi_af_en_b", (int *)&dev->ccm_cfg[1]->af_power_io , sizeof(user_gpio_set_t)/sizeof(int));
+		if (ret) {
+			csi_err("fetch csi_af_en_b from sys_config failed\n");
 		}
 	}
 
@@ -1836,7 +2291,8 @@ reg_sd:
 		dev->ccm_cfg[input_num]->ccm_info.vref = CSI_LOW;
 		dev->ccm_cfg[input_num]->ccm_info.href = CSI_LOW;
 		dev->ccm_cfg[input_num]->ccm_info.clock = CSI_FALLING;
-
+		dev->ccm_cfg[input_num]->ccm_info.stby_mode = dev->stby_mode;
+		
 		ret = v4l2_subdev_call(dev->ccm_cfg[input_num]->sd,core,ioctl,CSI_SUBDEV_CMD_GET_INFO,&dev->ccm_cfg[input_num]->ccm_info);
 		if (ret < 0)
 		{
@@ -1913,7 +2369,26 @@ reg_sd:
 		ret = -ENXIO;
 		goto unreg_dev;
 	}
-
+	
+	/* power on and power off device */
+	for(input_num=0; input_num<dev->dev_qty; input_num++)
+	{
+      ret = update_ccm_info(dev, dev->ccm_cfg[input_num]);
+      if(ret<0)
+      	csi_err("Error when set ccm info when probe!\n");
+      
+		if(dev->stby_mode == 1) {
+			csi_print("power on and power off camera %d!\n",input_num);
+			v4l2_subdev_call(dev->ccm_cfg[input_num]->sd,core, s_power, CSI_SUBDEV_PWR_ON);
+			v4l2_subdev_call(dev->ccm_cfg[input_num]->sd,core, s_power, CSI_SUBDEV_PWR_OFF);
+		} else {
+			csi_print("power on and standy on camera %d!\n",input_num);
+			csi_clk_out_set(dev);
+			v4l2_subdev_call(dev->ccm_cfg[input_num]->sd,core, s_power, CSI_SUBDEV_PWR_ON);
+			v4l2_subdev_call(dev->ccm_cfg[input_num]->sd,core, s_power, CSI_SUBDEV_STBY_OFF);
+			v4l2_subdev_call(dev->ccm_cfg[input_num]->sd,core, s_power, CSI_SUBDEV_STBY_ON);
+		}
+	}
 //	csi_dbg("%s(): csi-%d registered successfully\n",__func__, dev->id);
 
 	/*video device register	*/
@@ -1953,7 +2428,42 @@ reg_sd:
 	/* init video dma queues */
 	INIT_LIST_HEAD(&dev->vidq.active);
 	//init_waitqueue_head(&dev->vidq.wq);
-
+	
+	/* initial state */
+	dev->capture_mode = V4L2_MODE_VIDEO;
+	
+#ifdef AJUST_DRAM_PRIORITY
+{
+        void __iomem *regs_dram;
+        volatile unsigned int tmpval = 0;
+        volatile unsigned int tmpval_csi = 0;
+        
+        printk("Warning: we write the DRAM priority directely here, it will be fixed in the next version.");
+        regs_dram = ioremap(SDRAM_REGS_pBASE, 0x2E0);
+        
+        tmpval = readl(regs_dram + 0x250 + 4 * 16);
+        printk("cpu host port: %x\n", tmpval);
+        tmpval |= 3 << 2;
+        printk("cpu priority: %d\n", tmpval);
+        
+        tmpval_csi = readl(regs_dram + 0x250 + 4 * 20);         // csi0
+        printk("csi0 host port: %x\n", tmpval_csi);
+        tmpval_csi |= (!(3<<2));
+        tmpval_csi |= tmpval;
+        writel(tmpval_csi, regs_dram + 0x250 + 4 * 20);
+        printk("csi0 host port(after): %x\n", tmpval_csi);
+        
+        tmpval_csi = readl(regs_dram + 0x250 + 4 * 27);         // csi1
+        printk("csi1 host port: %x\n", tmpval_csi);
+        tmpval_csi |= (!(3<<2));
+        tmpval_csi |= tmpval;
+        writel(tmpval_csi, regs_dram + 0x250 + 4 * 27);
+        printk("csi1 host port(after): %x\n", tmpval_csi);
+        
+        iounmap(regs_dram);
+}
+#endif // AJUST_DRAM_PRIORITY
+	
 	return 0;
 
 rel_vdev:

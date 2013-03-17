@@ -33,9 +33,10 @@
 #include <linux/videodev2.h>
 #include <linux/i2c.h>
 #include <media/v4l2-mediabus.h>//linux-3.0
+#include <mach/sys_config.h>
 
 //for internel driver debug
-#define DBG_EN   		0 	
+#define DBG_EN   		1
 //debug level 0~3
 #define DBG_LEVEL 	3
 
@@ -68,6 +69,8 @@ typedef enum tag_CSI_INPUT_FMT
     CSI_BAYER,     /* byer rgb242 */
     CSI_CCIR656,   /* ccir656     */
     CSI_YUV422,    /* yuv422      */
+    CSI_YUV422_16 = 4, /* yuv422 16 bit */
+    CSI_YUV444 = 4,		 /* yuv444 24 bit */
 }__csi_input_fmt_t;
 
 /*
@@ -103,6 +106,13 @@ typedef enum tag_CSI_OUTPUT_FMT
     CSI_UV_CB_YUV420=5,
     CSI_MB_YUV422=8,
     CSI_MB_YUV420=9,
+    
+    /* only when input is yuv444 */
+    CSI_FIELD_PLANAR_YUV444 			 = 12,         /* parse a field(odd or even) into planar yuv444 */
+    CSI_FIELD_UV_CB_YUV444_YUV422 = 13,         /* parse a field(odd or even) into planar yuv422 */
+    CSI_FRAME_PLANAR_YUV444 			 = 14,				
+    CSI_FRAME_UV_CB_YUV444_YUV422 = 15,
+    
 }__csi_output_fmt_t;
 
 /*
@@ -160,6 +170,7 @@ typedef struct tag_CSI_CONF
     __csi_output_fmt_t output_fmt;  /* output data format */
     __csi_field_sel_t  field_sel;   /* input field selection */
     __csi_seq_t        seq;         /* input data sequence */
+    __csi_ref_t				 fref;				/* input field signal polarity */
     __csi_ref_t        vref;        /* input vref signal polarity */
     __csi_ref_t        href;        /* input href signal polarity */
     __csi_clk_t        clock;       /* input data valid of the input clock edge type */
@@ -240,6 +251,16 @@ typedef struct tag_CSI_INT_STATUS
     _Bool vsync_trig;
 }__csi_int_status_t;
 
+typedef enum tag_CSI_IF
+{
+		CSI_IF_HV8 					= 0,
+		CSI_IF_CCIR656_16 	= 1,
+		CSI_IF_HV24 				= 2,
+		CSI_IF_CCIR656			= 3,
+		CSI_IF_CCIR656_2CH	= 4,
+		CSI_IF_CCIR656_4CH 	= 5,
+}__csi_if_t;
+
 /*
  * csi sub device info
  */
@@ -249,7 +270,8 @@ typedef struct tag_CSI_SUBDEV_INFO
     __csi_ref_t        vref;        /* input vref signal polarity */
     __csi_ref_t        href;        /* input href signal polarity */
     __csi_clk_t        clock;       /* input data valid of the input clock edge type */
-    int								 iocfg;				/*0 for csi back , 1 for csi front*/				 
+    int								 iocfg;				/*0 for csi back , 1 for csi front*/				
+    int 							 stby_mode;			
 }__csi_subdev_info_t;
 struct csi_buf_addr {
 	dma_addr_t	y;
@@ -259,10 +281,13 @@ struct csi_buf_addr {
 
 struct csi_fmt {
 	u8					name[32];
-	enum v4l2_mbus_pixelcode					ccm_fmt;//linux-3.0
-	u32   				fourcc;          /* v4l2 format id */
-	__csi_input_fmt_t	input_fmt;	
-	__csi_output_fmt_t 	output_fmt;	
+	__csi_if_t									csi_if;
+	enum v4l2_mbus_pixelcode		ccm_fmt;//linux-3.0
+	u32   											fourcc;          /* v4l2 format id */
+	enum v4l2_field							field;
+	__csi_input_fmt_t						input_fmt;	
+	__csi_output_fmt_t 					output_fmt;	
+	__csi_field_sel_t						csi_field;
 	int   				depth;
 	u16	  				planes_cnt;
 };
@@ -300,6 +325,11 @@ struct ccm_config {
 	int stby_mode;
 	int interface;
 	int flash_pol;		
+	user_gpio_set_t reset_io;
+	user_gpio_set_t standby_io;
+	user_gpio_set_t power_io;
+	user_gpio_set_t flash_io;
+	user_gpio_set_t af_power_io;
 	struct regulator 	 *iovdd;		  /*interface voltage source of sensor module*/
 	struct regulator 	 *avdd;			/*anlog voltage source of sensor module*/
 	struct regulator 	 *dvdd;			/*core voltage source of sensor module*/
@@ -333,9 +363,12 @@ struct csi_dev {
 	struct csi_fmt          *fmt;
 	unsigned int            width;
 	unsigned int            height;
+	unsigned int						hstart;
+	unsigned int						vstart;
 	unsigned int						frame_size;
 	struct videobuf_queue   vb_vidq;
-
+	unsigned int 						capture_mode;
+	
 	/*working state*/
 	unsigned long 		   	generating;
 	int						opened;
@@ -365,6 +398,13 @@ struct csi_dev {
 	int hflip;
 	int flash_pol;
 	
+	/* csi io */
+	user_gpio_set_t reset_io;
+	user_gpio_set_t standby_io;
+	user_gpio_set_t power_io;
+	user_gpio_set_t flash_io;
+	user_gpio_set_t af_power_io;
+	
 	/*parameters*/
 	__csi_conf_t			csi_mode;
 	struct csi_buf_addr		csi_buf_addr;
@@ -379,15 +419,21 @@ struct csi_dev {
 void  bsp_csi_open(struct csi_dev *dev);
 void  bsp_csi_close(struct csi_dev *dev);
 void  bsp_csi_configure(struct csi_dev *dev,__csi_conf_t *mode);
+void  inline  bsp_csi_set_buffer_address(struct csi_dev *dev,__csi_buf_t buf, u32 addr);
+u32	   inline  bsp_csi_get_buffer_address(struct csi_dev *dev,__csi_buf_t buf);
 void  bsp_csi_double_buffer_enable(struct csi_dev *dev);
 void  bsp_csi_double_buffer_disable(struct csi_dev *dev);
+void  inline  bsp_csi_double_buffer_select_next(struct csi_dev *dev,__csi_double_buf_t type);
+void  inline  bsp_csi_double_buffer_get_status(struct csi_dev *dev,__csi_double_buf_status_t * status);
 void  bsp_csi_capture_video_start(struct csi_dev *dev);
 void  bsp_csi_capture_video_stop(struct csi_dev *dev);
 void  bsp_csi_capture_picture(struct csi_dev *dev);
 void  bsp_csi_capture_get_status(struct csi_dev *dev,__csi_capture_status * status);
-void 	bsp_csi_set_size(struct csi_dev *dev, u32 length_h, u32 length_v, u32 buf_length_h);
-void 	bsp_csi_set_offset(struct csi_dev *dev,u32 start_h, u32 start_v);
+void  bsp_csi_set_size(struct csi_dev *dev, u32 length_h, u32 length_v, u32 buf_length_h);
+void  bsp_csi_set_offset(struct csi_dev *dev,u32 start_h, u32 start_v);
 void  bsp_csi_int_enable(struct csi_dev *dev,__csi_int_t interrupt);
 void  bsp_csi_int_disable(struct csi_dev *dev,__csi_int_t interrupt);
+void  inline 	bsp_csi_int_get_status(struct csi_dev *dev,__csi_int_status_t * status);
+void  inline bsp_csi_int_clear_status(struct csi_dev *dev,__csi_int_t interrupt);
 
 #endif  /* _CSI_H_ */
