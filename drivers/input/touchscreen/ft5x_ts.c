@@ -1701,6 +1701,8 @@ ft5x_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	ft5x_ts->input_dev = input_dev;
+	pr_info("====Just set EV_SYN bit =====.  \n");
+	set_bit(EV_SYN, input_dev->evbit);
 
 	set_bit(EV_ABS, input_dev->evbit);
 	set_bit(EV_KEY, input_dev->evbit);
